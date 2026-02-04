@@ -1,14 +1,22 @@
 'use client';
 
-import { useEffect, useState, useCallback } from 'react';
+import { useEffect, useState, useCallback, useMemo } from 'react';
+
+interface HNData {
+  score: number;
+  comments: number;
+  hnUrl: string;
+}
 
 interface FeedItem {
   title: string;
   link: string;
   pubDate: string;
+  timestamp: number;
   source: string;
   sourceUrl: string;
   category: string;
+  hn: HNData | null;
 }
 
 interface FeedResponse {
@@ -21,6 +29,8 @@ interface FeedResponse {
   };
 }
 
+type SortOption = 'recent' | 'popular';
+
 const categoryColors: Record<string, string> = {
   Tech: 'bg-blue-500/20 text-blue-400',
   Security: 'bg-red-500/20 text-red-400',
@@ -32,6 +42,7 @@ const categoryColors: Record<string, string> = {
   Hardware: 'bg-orange-500/20 text-orange-400',
   Gaming: 'bg-pink-500/20 text-pink-400',
   Design: 'bg-indigo-500/20 text-indigo-400',
+  Business: 'bg-emerald-500/20 text-emerald-400',
 };
 
 function formatTimeAgo(dateString: string): string {
@@ -54,6 +65,7 @@ export default function Home() {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [filter, setFilter] = useState<string>('all');
+  const [sort, setSort] = useState<SortOption>('recent');
 
   const fetchFeeds = useCallback(async () => {
     try {
@@ -78,12 +90,30 @@ export default function Home() {
   }, [fetchFeeds]);
 
   const categories = data
-    ? ['all', ...Array.from(new Set(data.items.map((item) => item.category)))]
+    ? ['all', ...Array.from(new Set(data.items.map((item) => item.category))).sort()]
     : ['all'];
 
-  const filteredItems = data?.items.filter(
-    (item) => filter === 'all' || item.category === filter
-  );
+  const filteredAndSortedItems = useMemo(() => {
+    if (!data?.items) return [];
+
+    let items = data.items.filter(
+      (item) => filter === 'all' || item.category === filter
+    );
+
+    if (sort === 'popular') {
+      // Sort by HN score (items with HN data first, then by score)
+      items = [...items].sort((a, b) => {
+        const scoreA = a.hn?.score ?? -1;
+        const scoreB = b.hn?.score ?? -1;
+        return scoreB - scoreA;
+      });
+    }
+    // 'recent' is already sorted by API
+
+    return items;
+  }, [data?.items, filter, sort]);
+
+  const hnCount = data?.items.filter((item) => item.hn !== null).length ?? 0;
 
   return (
     <div className="min-h-screen bg-[var(--background)]">
@@ -98,21 +128,49 @@ export default function Home() {
       </header>
 
       <main className="mx-auto max-w-6xl px-4 py-8">
-        {/* Category Filter */}
-        <div className="flex flex-wrap gap-2 mb-8">
-          {categories.map((category) => (
+        {/* Filters and Sort */}
+        <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4 mb-8">
+          {/* Category Filter */}
+          <div className="flex flex-wrap gap-2">
+            {categories.map((category) => (
+              <button
+                key={category}
+                onClick={() => setFilter(category)}
+                className={`px-3 py-1.5 text-sm rounded-full transition-colors ${
+                  filter === category
+                    ? 'bg-white text-black'
+                    : 'bg-[var(--card)] text-[var(--muted)] hover:text-white'
+                }`}
+              >
+                {category === 'all' ? 'All' : category}
+              </button>
+            ))}
+          </div>
+
+          {/* Sort Options */}
+          <div className="flex items-center gap-2">
+            <span className="text-[var(--muted)] text-sm">Sort:</span>
             <button
-              key={category}
-              onClick={() => setFilter(category)}
+              onClick={() => setSort('recent')}
               className={`px-3 py-1.5 text-sm rounded-full transition-colors ${
-                filter === category
+                sort === 'recent'
                   ? 'bg-white text-black'
                   : 'bg-[var(--card)] text-[var(--muted)] hover:text-white'
               }`}
             >
-              {category === 'all' ? 'All' : category}
+              Recent
             </button>
-          ))}
+            <button
+              onClick={() => setSort('popular')}
+              className={`px-3 py-1.5 text-sm rounded-full transition-colors ${
+                sort === 'popular'
+                  ? 'bg-orange-500 text-white'
+                  : 'bg-[var(--card)] text-[var(--muted)] hover:text-white'
+              }`}
+            >
+              HN Popular
+            </button>
+          </div>
         </div>
 
         {/* Loading State */}
@@ -132,22 +190,26 @@ export default function Home() {
         )}
 
         {/* Feed Items */}
-        {!loading && !error && filteredItems && (
+        {!loading && !error && filteredAndSortedItems && (
           <div className="space-y-1">
-            {filteredItems.map((item, index) => (
-              <a
+            {filteredAndSortedItems.map((item, index) => (
+              <div
                 key={`${item.link}-${index}`}
-                href={item.link}
-                target="_blank"
-                rel="noopener noreferrer"
-                className="block py-3 px-4 -mx-4 rounded-lg hover:bg-[var(--card)] transition-colors group"
+                className="py-3 px-4 -mx-4 rounded-lg hover:bg-[var(--card)] transition-colors group"
               >
                 <div className="flex items-start gap-4">
                   <div className="flex-1 min-w-0">
-                    <h2 className="font-medium text-[var(--foreground)] group-hover:text-white truncate">
-                      {item.title}
-                    </h2>
-                    <div className="flex items-center gap-3 mt-1.5 text-sm">
+                    <a
+                      href={item.link}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      className="block"
+                    >
+                      <h2 className="font-medium text-[var(--foreground)] group-hover:text-white">
+                        {item.title}
+                      </h2>
+                    </a>
+                    <div className="flex flex-wrap items-center gap-x-3 gap-y-1 mt-1.5 text-sm">
                       <span className="text-[var(--muted)]">{item.source}</span>
                       <span className="text-[var(--border)]">•</span>
                       <span className="text-[var(--muted)]">
@@ -161,25 +223,53 @@ export default function Home() {
                       >
                         {item.category}
                       </span>
+                      {item.hn && (
+                        <a
+                          href={item.hn.hnUrl}
+                          target="_blank"
+                          rel="noopener noreferrer"
+                          className="inline-flex items-center gap-1.5 px-2 py-0.5 rounded text-xs bg-orange-500/20 text-orange-400 hover:bg-orange-500/30 transition-colors"
+                          onClick={(e) => e.stopPropagation()}
+                        >
+                          <svg
+                            className="w-3 h-3"
+                            viewBox="0 0 24 24"
+                            fill="currentColor"
+                          >
+                            <path d="M12 2L2 7l10 5 10-5-10-5zM2 17l10 5 10-5M2 12l10 5 10-5" />
+                          </svg>
+                          {item.hn.score} pts
+                          {item.hn.comments > 0 && (
+                            <span className="text-orange-400/70">
+                              · {item.hn.comments}
+                            </span>
+                          )}
+                        </a>
+                      )}
                     </div>
                   </div>
                 </div>
-              </a>
+              </div>
             ))}
           </div>
         )}
 
         {/* Empty State */}
-        {!loading && !error && filteredItems?.length === 0 && (
+        {!loading && !error && filteredAndSortedItems?.length === 0 && (
           <div className="text-center py-20 text-[var(--muted)]">
             No posts found for this category.
           </div>
         )}
 
-        {/* Last Updated */}
+        {/* Stats & Last Updated */}
         {data && (
           <div className="mt-12 pt-8 border-t border-[var(--border)] text-center text-sm text-[var(--muted)]">
-            Last updated: {new Date(data.lastUpdated).toLocaleString()}
+            <p>
+              {data.items.length} posts · {hnCount} featured on Hacker News
+            </p>
+            <p className="mt-1">
+              Last updated: {new Date(data.lastUpdated).toLocaleString()}
+            </p>
           </div>
         )}
       </main>
