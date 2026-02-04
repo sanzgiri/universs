@@ -1,5 +1,6 @@
 import { NextResponse } from 'next/server';
 import { fetchAllFeeds } from '@/lib/rss';
+import { enrichWithHNData } from '@/lib/hackernews';
 import feedsConfig from '@/config/feeds.json';
 
 // Cache the response for 1 hour (3600 seconds)
@@ -9,8 +10,11 @@ export async function GET() {
   try {
     const items = await fetchAllFeeds(feedsConfig.feeds, feedsConfig.settings);
 
+    // Enrich with Hacker News data
+    const enrichedItems = await enrichWithHNData(items);
+
     return NextResponse.json({
-      items,
+      items: enrichedItems,
       lastUpdated: new Date().toISOString(),
       settings: feedsConfig.settings,
     });
