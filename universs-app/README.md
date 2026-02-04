@@ -1,36 +1,127 @@
-This is a [Next.js](https://nextjs.org) project bootstrapped with [`create-next-app`](https://nextjs.org/docs/app/api-reference/cli/create-next-app).
+# Universs
+
+A minimalist blog feed tracker that aggregates posts from 92 popular tech blogs and shows their Hacker News popularity.
+
+## Features
+
+- **92 RSS/Atom feeds** from top Hacker News blogs
+- **Hacker News integration** - See which posts made it to HN with scores and comment counts
+- **Category filtering** - Tech, Security, AI, Science, Culture, and more
+- **Sort options** - Recent or HN Popular
+- **Dark minimalist UI** - Inspired by worldstream.io
+- **Configurable** - Easy to add/remove feeds via JSON config
+- **Age filtering** - Only shows posts from the last 30 days (configurable)
+- **Hourly refresh** - Automatically fetches new posts
+
+## Tech Stack
+
+- **Next.js 16** - React framework with App Router
+- **TypeScript** - Type-safe code
+- **Tailwind CSS** - Utility-first styling
+- **rss-parser** - RSS/Atom feed parsing
+- **Algolia HN API** - Hacker News popularity data
 
 ## Getting Started
 
-First, run the development server:
+### Prerequisites
+
+- Node.js 18+
+- npm
+
+### Installation
 
 ```bash
+# Clone the repo
+git clone <repo-url>
+cd universs-app
+
+# Install dependencies
+npm install
+
+# Run development server
 npm run dev
-# or
-yarn dev
-# or
-pnpm dev
-# or
-bun dev
+
+# Or build and run production
+npm run build
+npm run start
 ```
 
-Open [http://localhost:3000](http://localhost:3000) with your browser to see the result.
+Open [http://localhost:3000](http://localhost:3000) to view the app.
 
-You can start editing the page by modifying `app/page.tsx`. The page auto-updates as you edit the file.
+## Configuration
 
-This project uses [`next/font`](https://nextjs.org/docs/app/building-your-application/optimizing/fonts) to automatically optimize and load [Geist](https://vercel.com/font), a new font family for Vercel.
+Edit `src/config/feeds.json` to customize:
 
-## Learn More
+```json
+{
+  "settings": {
+    "postsPerFeed": 3,
+    "maxFeeds": 100,
+    "refreshIntervalMinutes": 60,
+    "maxAgeDays": 30
+  },
+  "feeds": [
+    { "url": "https://example.com/feed.xml", "category": "Tech" }
+  ]
+}
+```
 
-To learn more about Next.js, take a look at the following resources:
+### Categories
 
-- [Next.js Documentation](https://nextjs.org/docs) - learn about Next.js features and API.
-- [Learn Next.js](https://nextjs.org/learn) - an interactive Next.js tutorial.
+Available categories: Tech, Security, AI, Science, Culture, Math, Hardware, Gaming, Design, Business, Apple
 
-You can check out [the Next.js GitHub repository](https://github.com/vercel/next.js) - your feedback and contributions are welcome!
+## Deployment
 
-## Deploy on Vercel
+### Vercel (Recommended)
 
-The easiest way to deploy your Next.js app is to use the [Vercel Platform](https://vercel.com/new?utm_medium=default-template&filter=next.js&utm_source=create-next-app&utm_campaign=create-next-app-readme) from the creators of Next.js.
+```bash
+# Install Vercel CLI
+npm i -g vercel
 
-Check out our [Next.js deployment documentation](https://nextjs.org/docs/app/building-your-application/deploying) for more details.
+# Login and deploy
+vercel login
+vercel --prod
+```
+
+Or connect your GitHub repo at [vercel.com](https://vercel.com).
+
+### Other Platforms
+
+Works on any platform that supports Next.js:
+- Netlify
+- Railway
+- Render
+- Self-hosted with `npm run build && npm run start`
+
+## API
+
+### GET /api/feeds
+
+Returns all feed items with HN data.
+
+```json
+{
+  "items": [
+    {
+      "title": "Post Title",
+      "link": "https://...",
+      "pubDate": "2026-02-04T01:40:24.000Z",
+      "timestamp": 1770169224000,
+      "source": "Blog Name",
+      "sourceUrl": "https://...",
+      "category": "Tech",
+      "hn": {
+        "score": 298,
+        "comments": 245,
+        "hnUrl": "https://news.ycombinator.com/item?id=..."
+      }
+    }
+  ],
+  "lastUpdated": "2026-02-04T08:00:00.000Z",
+  "settings": { ... }
+}
+```
+
+## License
+
+MIT
