@@ -1,0 +1,13 @@
+{                                                               
+    "$schema": "https://openapi.vercel.sh/vercel.json",
+    "installCommand": "cd universs-app && npm install",
+    "buildCommand": "cd universs-app && npm run build",
+    "outputDirectory": "universs-app/.next",
+    "regions": ["iad1"],
+    "crons": [
+      {
+        "path": "/api/feeds",
+        "schedule": "0 8 * * *"
+      }
+    ]
+ }
