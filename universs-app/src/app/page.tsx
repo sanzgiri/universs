@@ -177,6 +177,7 @@ export default function Home() {
   const [selected, setSelected] = useState(0); // keyboard cursor index
   const [shareFor, setShareFor] = useState<string | null>(null); // open share menu (item.link)
   const [showHelp, setShowHelp] = useState(false);
+  const [showInfo, setShowInfo] = useState(false);
   // User's imported feed list (null = use the built-in feeds). Persisted to
   // localStorage; sent to the API via POST. No server-side storage.
   const [customFeeds, setCustomFeeds] = useState<FeedConfig[] | null>(() => {
@@ -273,6 +274,14 @@ export default function Home() {
 
   const hnCount = data?.items.filter((item) => item.hn !== null).length ?? 0;
   const savedCount = bookmarks.set.size;
+
+  // Distinct sources/categories currently loaded, for the About panel.
+  const sourceCount = data
+    ? new Set(data.items.map((item) => item.source)).size
+    : 0;
+  const categoryList = data
+    ? Array.from(new Set(data.items.map((item) => item.category))).sort()
+    : [];
 
   // Clamp/reset the keyboard cursor when the visible list changes.
   useEffect(() => {
@@ -372,6 +381,7 @@ export default function Home() {
       if (e.key === 'Escape') {
         setShareFor(null);
         setShowHelp(false);
+        setShowInfo(false);
         if (typing && el) el.blur();
         return;
       }
@@ -452,6 +462,17 @@ export default function Home() {
               </p>
             </div>
             <div className="flex items-center gap-2 shrink-0">
+              <button
+                onClick={() => setShowInfo(true)}
+                aria-label="About Universs"
+                title="About Universs"
+                className="inline-flex p-2 rounded-full bg-[var(--card)] text-[var(--muted)] hover:text-[var(--foreground)] hover:bg-[var(--card-hover)] transition-colors cursor-pointer"
+              >
+                <svg className="w-5 h-5" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                  <circle cx="12" cy="12" r="10" />
+                  <path d="M12 16v-4M12 8h.01" />
+                </svg>
+              </button>
               <button
                 onClick={() => setShowHelp(true)}
                 aria-label="Keyboard shortcuts"
@@ -828,6 +849,105 @@ export default function Home() {
                 </li>
               ))}
             </ul>
+          </div>
+        </div>
+      )}
+
+      {/* About / info overlay */}
+      {showInfo && (
+        <div
+          className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 p-4"
+          onClick={() => setShowInfo(false)}
+        >
+          <div
+            className="w-full max-w-md max-h-[85vh] overflow-y-auto rounded-xl border border-[var(--border)] bg-[var(--card)] p-5 shadow-xl"
+            onClick={(e) => e.stopPropagation()}
+          >
+            <div className="flex items-center justify-between mb-4">
+              <h2 className="text-base font-semibold">About Universs</h2>
+              <button
+                onClick={() => setShowInfo(false)}
+                aria-label="Close"
+                className="text-[var(--muted)] hover:text-[var(--foreground)] cursor-pointer"
+              >
+                ✕
+              </button>
+            </div>
+
+            <div className="space-y-4 text-sm leading-relaxed">
+              <section>
+                <h3 className="font-semibold text-[var(--foreground)] mb-1">Sources</h3>
+                <p className="text-[var(--muted)]">
+                  Universs aggregates the latest posts from{' '}
+                  <span className="text-[var(--foreground)]">
+                    {sourceCount > 0 ? sourceCount : 92} popular tech blogs
+                  </span>{' '}
+                  — the kind of independent writers and engineers that regularly
+                  reach the Hacker News front page.
+                </p>
+                <p className="text-[var(--muted)] mt-2">
+                  Feeds are pulled directly from each blog&apos;s RSS/Atom feed and
+                  grouped into categories
+                  {categoryList.length > 0 ? (
+                    <>: {categoryList.join(', ')}.</>
+                  ) : (
+                    <> like Tech, Culture, Security, Science, AI, and more.</>
+                  )}
+                </p>
+                <p className="text-[var(--muted)] mt-2">
+                  We fetch up to{' '}
+                  <span className="text-[var(--foreground)]">3 recent posts per blog</span>{' '}
+                  and only show posts from the{' '}
+                  <span className="text-[var(--foreground)]">last 30 days</span>.
+                  Cross-posted duplicates are removed automatically, and the feed
+                  refreshes once daily.
+                </p>
+                <p className="text-[var(--muted)] mt-2">
+                  You can bring your own sources too — use{' '}
+                  <span className="text-[var(--foreground)]">Import OPML</span> to load
+                  your own feed list, or{' '}
+                  <span className="text-[var(--foreground)]">Export OPML</span> /{' '}
+                  <a href="/api/feed.xml" target="_blank" rel="noopener noreferrer" className="text-[var(--accent)] hover:underline">RSS</a>{' '}
+                  to take Universs with you.
+                </p>
+              </section>
+
+              <section>
+                <h3 className="font-semibold text-[var(--foreground)] mb-1">Hacker News scoring</h3>
+                <p className="text-[var(--muted)]">
+                  Each post is checked against Hacker News via the{' '}
+                  <a href="https://hn.algolia.com/api" target="_blank" rel="noopener noreferrer" className="text-[var(--accent)] hover:underline">Algolia HN Search API</a>.
+                  When a post has been submitted to HN, we show its{' '}
+                  <span className="text-[var(--foreground)]">points</span> and{' '}
+                  <span className="text-[var(--foreground)]">comment count</span>, linked
+                  to the discussion thread.
+                </p>
+                <ul className="mt-2 space-y-1 text-[var(--muted)]">
+                  <li>
+                    <span className="text-[var(--foreground)]">Recent</span> sorts posts
+                    newest-first (default).
+                  </li>
+                  <li>
+                    <span className="text-[var(--foreground)]">HN Popular</span> sorts by
+                    Hacker News points, surfacing what the community is engaging with
+                    most.
+                  </li>
+                </ul>
+                <p className="text-[var(--muted)] mt-2">
+                  Scores reflect HN&apos;s live totals at fetch time and update as posts
+                  gain traction. Posts with no HN submission simply show no score.
+                </p>
+              </section>
+
+              <section>
+                <h3 className="font-semibold text-[var(--foreground)] mb-1">Privacy</h3>
+                <p className="text-[var(--muted)]">
+                  Your bookmarks, read history, theme, and imported feeds are stored{' '}
+                  <span className="text-[var(--foreground)]">only in your browser</span>{' '}
+                  — nothing is sent to or saved on a server.
+                </p>
+              </section>
+            </div>
           </div>
         </div>
       )}
