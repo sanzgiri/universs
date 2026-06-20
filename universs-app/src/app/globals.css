@@ -23,16 +23,19 @@
 }
 
 /* ---------- Light theme ---------- */
+/* Tuned for readability: a neutral-warm off-white base (not bright blue-white)
+   to cut glare, near-black foreground at AAA, and darker secondary/accent text
+   since light backgrounds wash out mid-grays more than dark ones do. */
 [data-theme="light"] {
-  --background: #fbfbfd;
-  --foreground: #1a1a1f;
-  --muted: #5f5f6b;
-  --accent: #2563eb;
-  --card: #f0f0f4;
-  --card-hover: #e7e7ee;
-  --border: #dcdce4;
-  --invert-bg: #1a1a1f;
-  --invert-fg: #fbfbfd;
+  --background: #fafaf9;
+  --foreground: #15151a;
+  --muted: #56565f;
+  --accent: #1d4ed8;
+  --card: #efeff1;
+  --card-hover: #e5e5e9;
+  --border: #d6d6dd;
+  --invert-bg: #15151a;
+  --invert-fg: #fafaf9;
 }
 
 @theme inline {
