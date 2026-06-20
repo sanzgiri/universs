@@ -1,13 +1,13 @@
 import type { Metadata } from "next";
-import { Inter, JetBrains_Mono } from "next/font/google";
+import { Lato, JetBrains_Mono } from "next/font/google";
 import "./globals.css";
 
-// Inter is a highly legible, screen-optimized UI/text typeface with a large
-// x-height and good rendering at small sizes — a clear readability win over
-// the previous geometric Geist for a content-dense feed.
-const inter = Inter({
+// Lato is the primary UI typeface used by Slack — a warm, highly legible
+// humanist sans-serif. We load the weights the UI actually uses.
+const lato = Lato({
   variable: "--font-sans",
   subsets: ["latin"],
+  weight: ["300", "400", "700", "900"],
   display: "swap",
 });
 
@@ -49,7 +49,7 @@ export default function RootLayout({
         <script dangerouslySetInnerHTML={{ __html: themeInitScript }} />
       </head>
       <body
-        className={`${inter.variable} ${jetbrainsMono.variable} antialiased`}
+        className={`${lato.variable} ${jetbrainsMono.variable} antialiased`}
       >
         {children}
       </body>

@@ -56,16 +56,16 @@ html {
 body {
   background: var(--background);
   color: var(--foreground);
+  /* Lato first, then a Slack-style system fallback stack. */
   font-family: var(--font-sans), -apple-system, BlinkMacSystemFont, "Segoe UI",
-    Roboto, Helvetica, Arial, sans-serif;
+    "Helvetica Neue", Helvetica, Arial, sans-serif, "Apple Color Emoji",
+    "Segoe UI Emoji", "Segoe UI Symbol";
   min-height: 100vh;
   /* Readability: comfortable default leading + crisp rendering */
   line-height: 1.6;
-  letter-spacing: -0.005em;
   -webkit-font-smoothing: antialiased;
   -moz-osx-font-smoothing: grayscale;
   text-rendering: optimizeLegibility;
-  font-feature-settings: "cv05" 1, "cv08" 1, "ss01" 1; /* Inter stylistic sets */
   /* Animate background/color when the theme flips */
   transition: background-color 0.2s ease, color 0.2s ease;
 }

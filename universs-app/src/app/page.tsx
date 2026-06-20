@@ -1,6 +1,6 @@
 'use client';
 
-import { useEffect, useState, useCallback, useMemo } from 'react';
+import { useEffect, useState, useCallback, useMemo, useRef } from 'react';
 
 interface HNData {
   score: number;
@@ -52,6 +52,18 @@ const STORAGE_KEYS = {
   bookmarks: 'universs-bookmarks',
   read: 'universs-read',
 };
+
+/** Build share-intent URLs for a post. All open the platform's own composer. */
+function shareLinks(title: string, link: string) {
+  const u = encodeURIComponent(link);
+  const t = encodeURIComponent(title);
+  return {
+    x: `https://twitter.com/intent/tweet?url=${u}&text=${t}`,
+    linkedin: `https://www.linkedin.com/sharing/share-offsite/?url=${u}`,
+    mastodon: `https://mastodonshare.com/?url=${u}&text=${t}`,
+    reddit: `https://www.reddit.com/submit?url=${u}&title=${t}`,
+  };
+}
 
 function formatTimeAgo(dateString: string): string {
   const date = new Date(dateString);
@@ -159,6 +171,12 @@ export default function Home() {
   const [query, setQuery] = useState('');
   const [showSavedOnly, setShowSavedOnly] = useState(false);
   const [hideRead, setHideRead] = useState(false);
+  const [selected, setSelected] = useState(0); // keyboard cursor index
+  const [shareFor, setShareFor] = useState<string | null>(null); // open share menu (item.link)
+  const [showHelp, setShowHelp] = useState(false);
+
+  const searchRef = useRef<HTMLInputElement>(null);
+  const itemRefs = useRef<(HTMLDivElement | null)[]>([]);
 
   const [theme, toggleTheme] = useTheme();
   const bookmarks = usePersistentSet(STORAGE_KEYS.bookmarks);
@@ -234,6 +252,104 @@ export default function Home() {
   const hnCount = data?.items.filter((item) => item.hn !== null).length ?? 0;
   const savedCount = bookmarks.set.size;
 
+  // Clamp/reset the keyboard cursor when the visible list changes.
+  useEffect(() => {
+    setSelected((s) => Math.min(Math.max(0, s), Math.max(0, filteredAndSortedItems.length - 1)));
+  }, [filteredAndSortedItems.length]);
+
+  const copyLink = useCallback(async (link: string) => {
+    try {
+      await navigator.clipboard.writeText(link);
+    } catch {
+      /* clipboard unavailable */
+    }
+  }, []);
+
+  const openItem = useCallback(
+    (item: FeedItem | undefined) => {
+      if (!item) return;
+      read.add(item.link);
+      window.open(item.link, '_blank', 'noopener,noreferrer');
+    },
+    [read]
+  );
+
+  // Keyboard shortcuts: j/k navigate, o/Enter open, s save, m mark read,
+  // / focus search, ? toggles help, Esc closes overlays.
+  useEffect(() => {
+    function onKey(e: KeyboardEvent) {
+      const el = e.target as HTMLElement | null;
+      const typing =
+        el &&
+        (el.tagName === 'INPUT' ||
+          el.tagName === 'TEXTAREA' ||
+          el.isContentEditable);
+
+      // Allow Escape to blur the search box / close menus even while typing.
+      if (e.key === 'Escape') {
+        setShareFor(null);
+        setShowHelp(false);
+        if (typing && el) el.blur();
+        return;
+      }
+      if (typing) return;
+
+      const items = filteredAndSortedItems;
+      switch (e.key) {
+        case 'j':
+          e.preventDefault();
+          setSelected((s) => Math.min(s + 1, items.length - 1));
+          break;
+        case 'k':
+          e.preventDefault();
+          setSelected((s) => Math.max(s - 1, 0));
+          break;
+        case 'o':
+        case 'Enter':
+          e.preventDefault();
+          openItem(items[selected]);
+          break;
+        case 's': {
+          e.preventDefault();
+          const it = items[selected];
+          if (it) bookmarks.toggle(it.link);
+          break;
+        }
+        case 'm': {
+          e.preventDefault();
+          const it = items[selected];
+          if (it) read.toggle(it.link);
+          break;
+        }
+        case '/':
+          e.preventDefault();
+          searchRef.current?.focus();
+          break;
+        case '?':
+          e.preventDefault();
+          setShowHelp((v) => !v);
+          break;
+      }
+    }
+    window.addEventListener('keydown', onKey);
+    return () => window.removeEventListener('keydown', onKey);
+  }, [filteredAndSortedItems, selected, openItem, bookmarks, read]);
+
+  // Keep the selected row scrolled into view.
+  useEffect(() => {
+    itemRefs.current[selected]?.scrollIntoView({ block: 'nearest' });
+  }, [selected]);
+
+  // Close the share menu when clicking anywhere outside it.
+  useEffect(() => {
+    if (!shareFor) return;
+    function onDocClick() {
+      setShareFor(null);
+    }
+    document.addEventListener('click', onDocClick);
+    return () => document.removeEventListener('click', onDocClick);
+  }, [shareFor]);
+
   const pillBase =
     'px-3 py-1.5 text-sm rounded-full transition-colors cursor-pointer';
   const pillActive = 'bg-[var(--invert-bg)] text-[var(--invert-fg)]';
@@ -252,25 +368,38 @@ export default function Home() {
                 What&apos;s happening in tech right now?
               </p>
             </div>
-            <button
-              onClick={toggleTheme}
-              aria-label={`Switch to ${theme === 'dark' ? 'light' : 'dark'} mode`}
-              title={`Switch to ${theme === 'dark' ? 'light' : 'dark'} mode`}
-              className="shrink-0 p-2 rounded-full bg-[var(--card)] text-[var(--muted)] hover:text-[var(--foreground)] hover:bg-[var(--card-hover)] transition-colors cursor-pointer"
-            >
-              {theme === 'dark' ? (
-                // Sun icon (click to go light)
+            <div className="flex items-center gap-2 shrink-0">
+              <button
+                onClick={() => setShowHelp(true)}
+                aria-label="Keyboard shortcuts"
+                title="Keyboard shortcuts (?)"
+                className="hidden sm:inline-flex p-2 rounded-full bg-[var(--card)] text-[var(--muted)] hover:text-[var(--foreground)] hover:bg-[var(--card-hover)] transition-colors cursor-pointer"
+              >
                 <svg className="w-5 h-5" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-                  <circle cx="12" cy="12" r="4" />
-                  <path d="M12 2v2M12 20v2M4.93 4.93l1.41 1.41M17.66 17.66l1.41 1.41M2 12h2M20 12h2M6.34 17.66l-1.41 1.41M19.07 4.93l-1.41 1.41" />
+                  <rect x="2" y="4" width="20" height="16" rx="2" />
+                  <path d="M6 8h.01M10 8h.01M14 8h.01M18 8h.01M8 12h.01M12 12h.01M16 12h.01M7 16h10" />
                 </svg>
-              ) : (
-                // Moon icon (click to go dark)
-                <svg className="w-5 h-5" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-                  <path d="M21 12.79A9 9 0 1 1 11.21 3 7 7 0 0 0 21 12.79z" />
-                </svg>
-              )}
-            </button>
+              </button>
+              <button
+                onClick={toggleTheme}
+                aria-label={`Switch to ${theme === 'dark' ? 'light' : 'dark'} mode`}
+                title={`Switch to ${theme === 'dark' ? 'light' : 'dark'} mode`}
+                className="p-2 rounded-full bg-[var(--card)] text-[var(--muted)] hover:text-[var(--foreground)] hover:bg-[var(--card-hover)] transition-colors cursor-pointer"
+              >
+                {theme === 'dark' ? (
+                  // Sun icon (click to go light)
+                  <svg className="w-5 h-5" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                    <circle cx="12" cy="12" r="4" />
+                    <path d="M12 2v2M12 20v2M4.93 4.93l1.41 1.41M17.66 17.66l1.41 1.41M2 12h2M20 12h2M6.34 17.66l-1.41 1.41M19.07 4.93l-1.41 1.41" />
+                  </svg>
+                ) : (
+                  // Moon icon (click to go dark)
+                  <svg className="w-5 h-5" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                    <path d="M21 12.79A9 9 0 1 1 11.21 3 7 7 0 0 0 21 12.79z" />
+                  </svg>
+                )}
+              </button>
+            </div>
           </div>
 
           {/* Search */}
@@ -280,10 +409,11 @@ export default function Home() {
               <path d="m21 21-4.3-4.3" />
             </svg>
             <input
+              ref={searchRef}
               type="search"
               value={query}
               onChange={(e) => setQuery(e.target.value)}
-              placeholder="Search titles and sources…"
+              placeholder="Search titles and sources…  ( press / )"
               className="w-full rounded-full bg-[var(--card)] border border-[var(--border)] py-2 pl-9 pr-4 text-sm text-[var(--foreground)] placeholder:text-[var(--muted)] focus:outline-none focus:border-[var(--accent)] transition-colors"
             />
           </div>
@@ -371,12 +501,20 @@ export default function Home() {
             {filteredAndSortedItems.map((item, index) => {
               const isSaved = bookmarks.set.has(item.link);
               const isRead = read.set.has(item.link);
+              const isSelected = index === selected;
+              const links = shareLinks(item.title, item.link);
               return (
                 <div
                   key={`${item.link}-${index}`}
-                  className={`py-3 px-4 -mx-4 rounded-lg hover:bg-[var(--card)] transition-colors group ${
-                    isRead ? 'opacity-55' : ''
-                  }`}
+                  ref={(el) => {
+                    itemRefs.current[index] = el;
+                  }}
+                  onMouseEnter={() => setSelected(index)}
+                  className={`relative py-3 px-4 -mx-4 rounded-lg transition-colors group ${
+                    isSelected
+                      ? 'bg-[var(--card)] ring-1 ring-[var(--accent)]/40'
+                      : 'hover:bg-[var(--card)]'
+                  } ${isRead ? 'opacity-55' : ''}`}
                 >
                   <div className="flex items-start gap-3">
                     {/* Bookmark toggle */}
@@ -447,6 +585,39 @@ export default function Home() {
                             )}
                           </a>
                         )}
+
+                        {/* Share */}
+                        <span className="relative inline-flex">
+                          <button
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              setShareFor((cur) => (cur === item.link ? null : item.link));
+                            }}
+                            aria-label="Share"
+                            title="Share"
+                            className="inline-flex items-center gap-1 px-2 py-0.5 rounded text-xs text-[var(--muted)] hover:text-[var(--foreground)] hover:bg-[var(--card-hover)] transition-colors cursor-pointer"
+                          >
+                            <svg className="w-3 h-3" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                              <circle cx="18" cy="5" r="3" />
+                              <circle cx="6" cy="12" r="3" />
+                              <circle cx="18" cy="19" r="3" />
+                              <path d="m8.6 13.5 6.8 4M15.4 6.5l-6.8 4" />
+                            </svg>
+                            Share
+                          </button>
+                          {shareFor === item.link && (
+                            <span
+                              className="absolute left-0 top-full mt-1 z-20 flex flex-col min-w-[150px] rounded-lg border border-[var(--border)] bg-[var(--card)] py-1 shadow-lg"
+                              onClick={(e) => e.stopPropagation()}
+                            >
+                              <a href={links.x} target="_blank" rel="noopener noreferrer" onClick={() => setShareFor(null)} className="px-3 py-1.5 text-xs text-[var(--foreground)] hover:bg-[var(--card-hover)]">Share on X / Twitter</a>
+                              <a href={links.linkedin} target="_blank" rel="noopener noreferrer" onClick={() => setShareFor(null)} className="px-3 py-1.5 text-xs text-[var(--foreground)] hover:bg-[var(--card-hover)]">Share on LinkedIn</a>
+                              <a href={links.mastodon} target="_blank" rel="noopener noreferrer" onClick={() => setShareFor(null)} className="px-3 py-1.5 text-xs text-[var(--foreground)] hover:bg-[var(--card-hover)]">Share on Mastodon</a>
+                              <a href={links.reddit} target="_blank" rel="noopener noreferrer" onClick={() => setShareFor(null)} className="px-3 py-1.5 text-xs text-[var(--foreground)] hover:bg-[var(--card-hover)]">Share on Reddit</a>
+                              <button onClick={() => { copyLink(item.link); setShareFor(null); }} className="text-left px-3 py-1.5 text-xs text-[var(--foreground)] hover:bg-[var(--card-hover)] cursor-pointer">Copy link</button>
+                            </span>
+                          )}
+                        </span>
                       </div>
                     </div>
                   </div>
@@ -478,6 +649,48 @@ export default function Home() {
           </div>
         )}
       </main>
+
+      {/* Keyboard shortcuts help overlay */}
+      {showHelp && (
+        <div
+          className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 p-4"
+          onClick={() => setShowHelp(false)}
+        >
+          <div
+            className="w-full max-w-sm rounded-xl border border-[var(--border)] bg-[var(--card)] p-5 shadow-xl"
+            onClick={(e) => e.stopPropagation()}
+          >
+            <div className="flex items-center justify-between mb-3">
+              <h2 className="text-base font-semibold">Keyboard shortcuts</h2>
+              <button
+                onClick={() => setShowHelp(false)}
+                aria-label="Close"
+                className="text-[var(--muted)] hover:text-[var(--foreground)] cursor-pointer"
+              >
+                ✕
+              </button>
+            </div>
+            <ul className="space-y-2 text-sm">
+              {[
+                ['j / k', 'Move selection down / up'],
+                ['o or Enter', 'Open selected post'],
+                ['s', 'Save / unsave selected'],
+                ['m', 'Mark selected read / unread'],
+                ['/', 'Focus search'],
+                ['Esc', 'Close menus / blur search'],
+                ['?', 'Toggle this help'],
+              ].map(([keys, desc]) => (
+                <li key={keys} className="flex items-center justify-between gap-4">
+                  <span className="text-[var(--muted)]">{desc}</span>
+                  <kbd className="shrink-0 rounded border border-[var(--border)] bg-[var(--background)] px-2 py-0.5 font-mono text-xs">
+                    {keys}
+                  </kbd>
+                </li>
+              ))}
+            </ul>
+          </div>
+        </div>
+      )}
     </div>
   );
 }
