@@ -1,12 +1,35 @@
 @import "tailwindcss";
 
-:root {
+/* Make Tailwind's `dark:` variant follow our [data-theme] attribute
+   (set by the toggle / pre-hydration script) instead of the OS setting. */
+@custom-variant dark (&:where([data-theme="dark"], [data-theme="dark"] *));
+
+/* ---------- Dark theme (default) ---------- */
+:root,
+[data-theme="dark"] {
   --background: #08080c;
   --foreground: #ededed;
-  --muted: #888888;
+  --muted: #8b8b96;
   --accent: #3b82f6;
-  --card: #12121a;
-  --border: #1f1f2e;
+  --card: #14141d;
+  --card-hover: #1b1b27;
+  --border: #232336;
+  /* Active "pill" / inverted button surface */
+  --invert-bg: #ffffff;
+  --invert-fg: #08080c;
+}
+
+/* ---------- Light theme ---------- */
+[data-theme="light"] {
+  --background: #fbfbfd;
+  --foreground: #1a1a1f;
+  --muted: #5f5f6b;
+  --accent: #2563eb;
+  --card: #f0f0f4;
+  --card-hover: #e7e7ee;
+  --border: #dcdce4;
+  --invert-bg: #1a1a1f;
+  --invert-fg: #fbfbfd;
 }
 
 @theme inline {
@@ -15,16 +38,50 @@
   --color-muted: var(--muted);
   --color-accent: var(--accent);
   --color-card: var(--card);
+  --color-card-hover: var(--card-hover);
   --color-border: var(--border);
-  --font-sans: var(--font-geist-sans);
-  --font-mono: var(--font-geist-mono);
+  --font-sans: var(--font-sans);
+  --font-mono: var(--font-mono);
+}
+
+html {
+  /* Smooth theme transitions */
+  color-scheme: dark;
+}
+
+[data-theme="light"] {
+  color-scheme: light;
 }
 
 body {
   background: var(--background);
   color: var(--foreground);
-  font-family: var(--font-sans), Arial, Helvetica, sans-serif;
+  font-family: var(--font-sans), -apple-system, BlinkMacSystemFont, "Segoe UI",
+    Roboto, Helvetica, Arial, sans-serif;
   min-height: 100vh;
+  /* Readability: comfortable default leading + crisp rendering */
+  line-height: 1.6;
+  letter-spacing: -0.005em;
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+  text-rendering: optimizeLegibility;
+  font-feature-settings: "cv05" 1, "cv08" 1, "ss01" 1; /* Inter stylistic sets */
+  /* Animate background/color when the theme flips */
+  transition: background-color 0.2s ease, color 0.2s ease;
+}
+
+/* Tighter leading + balanced wrapping for headings/titles */
+h1,
+h2,
+h3 {
+  line-height: 1.3;
+  text-wrap: balance;
+}
+
+/* Post titles read better with slightly more leading than the global headings */
+.post-title {
+  line-height: 1.4;
+  text-wrap: pretty;
 }
 
 /* Scrollbar styling */
