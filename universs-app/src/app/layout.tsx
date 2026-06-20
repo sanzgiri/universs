@@ -19,13 +19,46 @@ const jetbrainsMono = JetBrains_Mono({
 });
 
 export const metadata: Metadata = {
-  title: "Universs - Blog Feed Tracker",
-  description: "Track the latest updates from popular tech blogs",
+  metadataBase: new URL("https://universs-xi.vercel.app"),
+  title: {
+    default: "Universs — Tech Blog Feed Tracker with Hacker News Popularity",
+    template: "%s — Universs",
+  },
+  description:
+    "A minimalist RSS reader that aggregates 92 popular tech blogs and surfaces their Hacker News popularity. Search, bookmarks, dark/light themes, OPML, and offline PWA support.",
+  keywords: [
+    "RSS reader",
+    "feed aggregator",
+    "tech blogs",
+    "Hacker News",
+    "blog tracker",
+    "news aggregator",
+    "OPML",
+    "PWA",
+  ],
+  authors: [{ name: "Ashutosh Sanzgiri" }],
   manifest: "/manifest.webmanifest",
   icons: { icon: "/icon.svg", apple: "/icon.svg" },
   appleWebApp: { capable: true, title: "Universs", statusBarStyle: "black-translucent" },
   alternates: {
+    canonical: "/",
     types: { "application/rss+xml": "/api/feed.xml" },
+  },
+  openGraph: {
+    type: "website",
+    siteName: "Universs",
+    url: "https://universs-xi.vercel.app",
+    title: "Universs — Tech Blog Feed Tracker with Hacker News Popularity",
+    description:
+      "Aggregates 92 popular tech blogs and shows their Hacker News popularity. Search, bookmarks, dark/light themes, OPML, and offline PWA support.",
+    images: [{ url: "/icon.svg", alt: "Universs" }],
+  },
+  twitter: {
+    card: "summary",
+    title: "Universs — Tech Blog Feed Tracker",
+    description:
+      "Aggregates 92 popular tech blogs and surfaces their Hacker News popularity.",
+    images: ["/icon.svg"],
   },
 };
 

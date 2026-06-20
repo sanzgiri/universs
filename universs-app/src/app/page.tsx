@@ -809,6 +809,29 @@ export default function Home() {
             </p>
           </div>
         )}
+
+        {/* Attribution signature (shown on every page) */}
+        <footer className={`text-center text-xs text-[var(--muted)] ${data ? 'mt-6' : 'mt-12 pt-8 border-t border-[var(--border)]'}`}>
+          <p>
+            Created by Ashutosh Sanzgiri{' '}&middot;{' '}
+            <a
+              href="https://sanzgiri.github.io/portfolio/"
+              target="_blank"
+              rel="noopener noreferrer"
+              className="text-[var(--accent)] hover:underline"
+            >
+              Portfolio
+            </a>{' '}&middot;{' '}
+            <a
+              href="https://github.com/sanzgiri/universs"
+              target="_blank"
+              rel="noopener noreferrer"
+              className="text-[var(--accent)] hover:underline"
+            >
+              Source
+            </a>
+          </p>
+        </footer>
       </main>
 
       {/* Keyboard shortcuts help overlay */}

@@ -2,6 +2,12 @@
 
 A minimalist blog feed tracker that aggregates posts from 92 popular tech blogs and shows their Hacker News popularity.
 
+**[→ Live demo](https://universs-xi.vercel.app)**
+
+![Universs screenshot](docs/screenshot.png)
+
+> _Built with Next.js 16 (App Router), TypeScript, Tailwind CSS, and the Algolia Hacker News API._
+
 ## Features
 
 - **92 RSS/Atom feeds** from top Hacker News blogs
