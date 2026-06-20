@@ -5,18 +5,21 @@
 @custom-variant dark (&:where([data-theme="dark"], [data-theme="dark"] *));
 
 /* ---------- Dark theme (default) ---------- */
+/* Tuned for readability: a soft near-black base (not pure black) avoids
+   halation/glare, foreground eased off max contrast (~15:1, still AAA), and
+   secondary text lifted for comfortable small-text legibility on cards. */
 :root,
 [data-theme="dark"] {
-  --background: #08080c;
-  --foreground: #ededed;
-  --muted: #8b8b96;
-  --accent: #3b82f6;
-  --card: #14141d;
-  --card-hover: #1b1b27;
-  --border: #232336;
+  --background: #0e0e13;
+  --foreground: #e6e6ea;
+  --muted: #9a9aa7;
+  --accent: #5b9bff;
+  --card: #1a1a24;
+  --card-hover: #22222e;
+  --border: #2c2c3d;
   /* Active "pill" / inverted button surface */
-  --invert-bg: #ffffff;
-  --invert-fg: #08080c;
+  --invert-bg: #f2f2f5;
+  --invert-fg: #0e0e13;
 }
 
 /* ---------- Light theme ---------- */
@@ -82,6 +85,20 @@ h3 {
 .post-title {
   line-height: 1.4;
   text-wrap: pretty;
+}
+
+/* Visible focus ring for keyboard navigation (accessibility) */
+:focus-visible {
+  outline: 2px solid var(--accent);
+  outline-offset: 2px;
+  border-radius: 4px;
+}
+
+/* Links/metadata: ensure interactive accent text stays comfortably legible */
+@media (prefers-reduced-motion: reduce) {
+  body {
+    transition: none;
+  }
 }
 
 /* Scrollbar styling */

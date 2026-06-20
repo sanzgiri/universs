@@ -1,5 +1,5 @@
 <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512" width="512" height="512">
-  <rect width="512" height="512" rx="96" fill="#08080c"/>
+  <rect width="512" height="512" rx="96" fill="#0e0e13"/>
   <text x="50%" y="50%" dy="0.06em" text-anchor="middle" dominant-baseline="middle"
         font-family="'Lato', Arial, sans-serif" font-weight="900" font-size="150" letter-spacing="2"
         fill="#ededed">U</text>

@@ -4,8 +4,8 @@
   "description": "Aggregated posts from popular tech blogs, with Hacker News popularity.",
   "start_url": "/",
   "display": "standalone",
-  "background_color": "#08080c",
-  "theme_color": "#08080c",
+  "background_color": "#0e0e13",
+  "theme_color": "#0e0e13",
   "icons": [
     {
       "src": "/icon.svg",
