@@ -11,7 +11,7 @@ A minimalist blog feed tracker that aggregates posts from 92 popular tech blogs 
 - **Dark minimalist UI** - Inspired by worldstream.io
 - **Configurable** - Easy to add/remove feeds via JSON config
 - **Age filtering** - Only shows posts from the last 30 days (configurable)
-- **Hourly refresh** - Automatically fetches new posts via Vercel Cron
+- **Daily refresh** - Automatically fetches new posts via Vercel Cron
 
 ## Tech Stack
 
@@ -62,7 +62,7 @@ Open [http://localhost:3000](http://localhost:3000) to view the app.
 
 3. **Done!** Vercel will:
    - Build and deploy automatically
-   - Set up the hourly cron job for feed refresh
+   - Set up the daily cron job for feed refresh
    - Redeploy on every push to main
 
 ### Option 2: Vercel CLI
@@ -110,14 +110,19 @@ The `vercel.json` file configures:
   "crons": [
     {
       "path": "/api/feeds",
-      "schedule": "0 * * * *"
+      "schedule": "0 8 * * *"
     }
   ]
 }
 ```
 
-- **Cron job** runs hourly to refresh feed cache
-- **ISR** (Incremental Static Regeneration) caches API responses for 1 hour
+- **Cron job** runs daily (08:00 UTC) to refresh feed cache
+- **ISR** (Incremental Static Regeneration) caches API responses for 24 hours
+
+> **Note:** The Vercel Hobby plan only permits daily cron jobs. If you are on a
+> Pro plan and want more frequent refreshes, change the cron `schedule` in
+> `vercel.json`, set `export const revalidate` in `src/app/api/feeds/route.ts`
+> to match, and update `refreshIntervalMinutes` in `src/config/feeds.json`.
 
 ### Custom Domain (Optional)
 
@@ -150,7 +155,7 @@ Edit `src/config/feeds.json` to customize:
 |---------|---------|-------------|
 | `postsPerFeed` | 3 | Number of posts to fetch per feed |
 | `maxFeeds` | 100 | Maximum feeds to process |
-| `refreshIntervalMinutes` | 60 | Client-side refresh interval |
+| `refreshIntervalMinutes` | 1440 | Client-side refresh interval (minutes) |
 | `maxAgeDays` | 30 | Filter out posts older than this |
 
 ### Categories
@@ -188,9 +193,9 @@ Returns all feed items with HN data.
 
 ## How Refresh Works
 
-1. **Vercel Cron** - Hits `/api/feeds` every hour to regenerate cache
-2. **ISR** - API responses cached for 1 hour (`revalidate = 3600`)
-3. **Client** - Browser checks for updates every hour
+1. **Vercel Cron** - Hits `/api/feeds` daily (08:00 UTC) to regenerate cache
+2. **ISR** - API responses cached for 24 hours (`revalidate = 86400`)
+3. **Client** - Browser checks for updates on the configured interval (default daily)
 
 ## License
 

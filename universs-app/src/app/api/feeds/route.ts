@@ -3,8 +3,10 @@ import { fetchAllFeeds } from '@/lib/rss';
 import { enrichWithHNData } from '@/lib/hackernews';
 import feedsConfig from '@/config/feeds.json';
 
-// Cache the response for 1 hour (3600 seconds)
-export const revalidate = 3600;
+// Revalidate the cached response once per day, matching the Vercel cron
+// schedule in vercel.json ("0 8 * * *"). The Vercel Hobby plan only allows
+// daily crons, so daily is the source of truth across the app.
+export const revalidate = 86400;
 
 export async function GET() {
   try {

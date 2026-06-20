@@ -26,6 +26,7 @@ interface FeedResponse {
     postsPerFeed: number;
     maxFeeds: number;
     refreshIntervalMinutes: number;
+    maxAgeDays: number;
   };
 }
 
@@ -83,11 +84,14 @@ export default function Home() {
 
   useEffect(() => {
     fetchFeeds();
-
-    // Refresh every hour
-    const interval = setInterval(fetchFeeds, 60 * 60 * 1000);
-    return () => clearInterval(interval);
   }, [fetchFeeds]);
+
+  // Refresh on the interval configured by the API (falls back to 60 min).
+  useEffect(() => {
+    const minutes = data?.settings?.refreshIntervalMinutes ?? 60;
+    const interval = setInterval(fetchFeeds, minutes * 60 * 1000);
+    return () => clearInterval(interval);
+  }, [fetchFeeds, data?.settings?.refreshIntervalMinutes]);
 
   const categories = data
     ? ['all', ...Array.from(new Set(data.items.map((item) => item.category))).sort()]

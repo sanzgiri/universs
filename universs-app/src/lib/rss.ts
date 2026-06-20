@@ -39,6 +39,31 @@ function parseDate(dateStr: string | undefined): Date | null {
   return isValidDate(date) ? date : null;
 }
 
+// Normalize a URL for dedup: drop protocol differences, trailing slashes,
+// common tracking params, and fragments so cross-posts collapse to one key.
+function normalizeLink(link: string): string {
+  try {
+    const url = new URL(link);
+    url.hash = '';
+    const stripParams = [
+      'utm_source',
+      'utm_medium',
+      'utm_campaign',
+      'utm_term',
+      'utm_content',
+      'ref',
+      'source',
+    ];
+    stripParams.forEach((p) => url.searchParams.delete(p));
+    const host = url.hostname.replace(/^www\./, '');
+    const path = url.pathname.replace(/\/+$/, '');
+    const search = url.search;
+    return `${host}${path}${search}`.toLowerCase();
+  } catch {
+    return link.trim().toLowerCase();
+  }
+}
+
 export async function fetchFeed(
   feedConfig: FeedConfig,
   postsPerFeed: number,
@@ -97,8 +122,19 @@ export async function fetchAllFeeds(
     }
   });
 
-  // Sort by date, newest first
-  allItems.sort((a, b) => b.timestamp - a.timestamp);
+  // Deduplicate cross-posted articles by normalized link, keeping the
+  // earliest-seen (post order is stable across runs).
+  const seen = new Set<string>();
+  const dedupedItems: FeedItem[] = [];
+  for (const item of allItems) {
+    const key = normalizeLink(item.link);
+    if (seen.has(key)) continue;
+    seen.add(key);
+    dedupedItems.push(item);
+  }
 
-  return allItems;
+  // Sort by date, newest first
+  dedupedItems.sort((a, b) => b.timestamp - a.timestamp);
+
+  return dedupedItems;
 }

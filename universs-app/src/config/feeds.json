@@ -2,7 +2,7 @@
   "settings": {
     "postsPerFeed": 3,
     "maxFeeds": 100,
-    "refreshIntervalMinutes": 60,
+    "refreshIntervalMinutes": 1440,
     "maxAgeDays": 30
   },
   "feeds": [
