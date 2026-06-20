@@ -1,6 +1,8 @@
 'use client';
 
 import { useEffect, useState, useCallback, useMemo, useRef } from 'react';
+import { feedsToOpml, opmlToFeeds } from '@/lib/opml';
+import type { FeedConfig } from '@/lib/rss';
 
 interface HNData {
   score: number;
@@ -51,6 +53,7 @@ const STORAGE_KEYS = {
   theme: 'universs-theme',
   bookmarks: 'universs-bookmarks',
   read: 'universs-read',
+  customFeeds: 'universs-custom-feeds',
 };
 
 /** Build share-intent URLs for a post. All open the platform's own composer. */
@@ -174,9 +177,22 @@ export default function Home() {
   const [selected, setSelected] = useState(0); // keyboard cursor index
   const [shareFor, setShareFor] = useState<string | null>(null); // open share menu (item.link)
   const [showHelp, setShowHelp] = useState(false);
+  // User's imported feed list (null = use the built-in feeds). Persisted to
+  // localStorage; sent to the API via POST. No server-side storage.
+  const [customFeeds, setCustomFeeds] = useState<FeedConfig[] | null>(() => {
+    if (typeof window === 'undefined') return null;
+    try {
+      const raw = window.localStorage.getItem(STORAGE_KEYS.customFeeds);
+      return raw ? (JSON.parse(raw) as FeedConfig[]) : null;
+    } catch {
+      return null;
+    }
+  });
+  const [notice, setNotice] = useState<string | null>(null);
 
   const searchRef = useRef<HTMLInputElement>(null);
   const itemRefs = useRef<(HTMLDivElement | null)[]>([]);
+  const fileInputRef = useRef<HTMLInputElement>(null);
 
   const [theme, toggleTheme] = useTheme();
   const bookmarks = usePersistentSet(STORAGE_KEYS.bookmarks);
@@ -184,7 +200,13 @@ export default function Home() {
 
   const fetchFeeds = useCallback(async () => {
     try {
-      const response = await fetch('/api/feeds');
+      const response = customFeeds
+        ? await fetch('/api/feeds', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ feeds: customFeeds }),
+          })
+        : await fetch('/api/feeds');
       if (!response.ok) throw new Error('Failed to fetch feeds');
       const result = await response.json();
       setData(result);
@@ -194,7 +216,7 @@ export default function Home() {
     } finally {
       setLoading(false);
     }
-  }, []);
+  }, [customFeeds]);
 
   useEffect(() => {
     fetchFeeds();
@@ -273,6 +295,67 @@ export default function Home() {
     },
     [read]
   );
+
+  const flash = useCallback((msg: string) => {
+    setNotice(msg);
+    window.setTimeout(() => setNotice(null), 4000);
+  }, []);
+
+  // Export the active feed list (custom if imported, else fetch built-in OPML).
+  const exportOpml = useCallback(() => {
+    const triggerDownload = (text: string) => {
+      const blob = new Blob([text], { type: 'text/x-opml' });
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement('a');
+      a.href = url;
+      a.download = 'universs-feeds.opml';
+      a.click();
+      URL.revokeObjectURL(url);
+    };
+    if (customFeeds) {
+      triggerDownload(feedsToOpml(customFeeds, 'Universs Feeds (custom)'));
+    } else {
+      // Built-in list lives server-side; the route emits it as a download.
+      window.open('/api/feeds.opml', '_blank');
+    }
+  }, [customFeeds]);
+
+  // Import an OPML file: parse in-browser, store in localStorage, re-fetch.
+  const importOpml = useCallback(
+    async (file: File) => {
+      try {
+        const text = await file.text();
+        const feeds = opmlToFeeds(text);
+        if (feeds.length === 0) {
+          flash('No feeds found in that OPML file.');
+          return;
+        }
+        try {
+          localStorage.setItem(STORAGE_KEYS.customFeeds, JSON.stringify(feeds));
+        } catch {
+          /* storage unavailable — still use it for this session */
+        }
+        setLoading(true);
+        setCustomFeeds(feeds);
+        flash(`Imported ${feeds.length} feeds. Loading…`);
+      } catch (err) {
+        flash(err instanceof Error ? err.message : 'Failed to import OPML.');
+      }
+    },
+    [flash]
+  );
+
+  // Revert to the built-in feed list.
+  const resetFeeds = useCallback(() => {
+    try {
+      localStorage.removeItem(STORAGE_KEYS.customFeeds);
+    } catch {
+      /* ignore */
+    }
+    setLoading(true);
+    setCustomFeeds(null);
+    flash('Reverted to the built-in feed list.');
+  }, [flash]);
 
   // Keyboard shortcuts: j/k navigate, o/Enter open, s save, m mark read,
   // / focus search, ? toggles help, Esc closes overlays.
@@ -477,7 +560,64 @@ export default function Home() {
           >
             {hideRead ? 'Showing unread' : 'Hide read'}
           </button>
+
+          <span className="mx-1 hidden sm:inline text-[var(--border)]">|</span>
+
+          {/* OPML import / export + custom-feed reset */}
+          <input
+            ref={fileInputRef}
+            type="file"
+            accept=".opml,.xml,text/xml,application/xml"
+            className="hidden"
+            onChange={(e) => {
+              const file = e.target.files?.[0];
+              if (file) importOpml(file);
+              e.target.value = ''; // allow re-importing the same file
+            }}
+          />
+          <button
+            onClick={() => fileInputRef.current?.click()}
+            className={`${pillBase} ${pillInactive}`}
+            title="Import an OPML feed list"
+          >
+            Import OPML
+          </button>
+          <button
+            onClick={exportOpml}
+            className={`${pillBase} ${pillInactive}`}
+            title="Export the current feed list as OPML"
+          >
+            Export OPML
+          </button>
+          {customFeeds && (
+            <button
+              onClick={resetFeeds}
+              className={`${pillBase} ${pillInactive}`}
+              title="Revert to the built-in feed list"
+            >
+              Reset feeds ({customFeeds.length})
+            </button>
+          )}
+          <a
+            href="/api/feed.xml"
+            target="_blank"
+            rel="noopener noreferrer"
+            className={`${pillBase} ${pillInactive} inline-flex items-center gap-1.5`}
+            title="Combined RSS feed of all sources"
+          >
+            <svg className="w-3.5 h-3.5" viewBox="0 0 24 24" fill="currentColor">
+              <path d="M4 11a9 9 0 0 1 9 9h2.5A11.5 11.5 0 0 0 4 8.5zM4 4a16 16 0 0 1 16 16h2.5A18.5 18.5 0 0 0 4 1.5zM6.5 17.5a2.5 2.5 0 1 1-5 0 2.5 2.5 0 0 1 5 0z" />
+            </svg>
+            RSS
+          </a>
         </div>
+
+        {/* Transient notice (OPML import/export feedback) */}
+        {notice && (
+          <div className="mb-6 rounded-lg bg-[var(--card)] border border-[var(--border)] px-4 py-2 text-sm text-[var(--foreground)]">
+            {notice}
+          </div>
+        )}
 
         {/* Loading State */}
         {loading && (

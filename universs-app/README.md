@@ -6,12 +6,25 @@ A minimalist blog feed tracker that aggregates posts from 92 popular tech blogs 
 
 - **92 RSS/Atom feeds** from top Hacker News blogs
 - **Hacker News integration** - See which posts made it to HN with scores and comment counts
+- **Search** - Instant client-side search across post titles and sources
+- **Bookmarks** - Save posts for later (stored in your browser, `localStorage`)
+- **Read/unread tracking** - Clicked posts are dimmed; toggle to hide read items
 - **Category filtering** - Tech, Security, AI, Science, Culture, and more
 - **Sort options** - Recent or HN Popular
-- **Dark minimalist UI** - Inspired by worldstream.io
+- **Light & dark themes** - Toggle in the header (uses Slack's Lato typeface), remembered across visits
+- **Keyboard shortcuts** - `j`/`k` navigate, `o`/`Enter` open, `s` save, `m` mark read, `/` search, `?` help
+- **Social sharing** - Per-post share to X/Twitter, LinkedIn, Mastodon, Reddit, or copy link
+- **OPML import/export** - Import your own feed list or export the built-in one
+- **Combined RSS output** - Subscribe to all sources at once via `/api/feed.xml`
+- **PWA / offline** - Installable, with offline reading of the last-fetched posts
 - **Configurable** - Easy to add/remove feeds via JSON config
 - **Age filtering** - Only shows posts from the last 30 days (configurable)
 - **Daily refresh** - Automatically fetches new posts via Vercel Cron
+
+> **Note on storage:** Search, bookmarks, read-tracking, theme, and imported
+> feed lists all live entirely in your browser (`localStorage` / Cache API).
+> Nothing is stored server-side, so the app runs on Vercel's free tier with no
+> database. Bookmarks/read-state are therefore per-device.
 
 ## Tech Stack
 
@@ -190,6 +203,29 @@ Returns all feed items with HN data.
   "settings": { ... }
 }
 ```
+
+### POST /api/feeds
+
+Returns items for a **custom feed list** (used by OPML import). The list is
+supplied by the client and is **not** stored server-side. Not ISR-cached.
+
+```json
+// Request body
+{ "feeds": [ { "url": "https://example.com/feed.xml", "category": "Tech" } ] }
+```
+
+Invalid or non-`http(s)` URLs are dropped; the list is capped to `maxFeeds`.
+
+### GET /api/feed.xml
+
+A combined **RSS 2.0** feed of all sources (built-in list). Cached via ISR for
+24 hours. Subscribe to it in any RSS reader, or auto-discover it via the
+`<link rel="alternate" type="application/rss+xml">` in the page `<head>`.
+
+### GET /api/feeds.opml
+
+Exports the built-in feed list as an **OPML 2.0** file (grouped by category)
+for import into other readers. Returned as a download.
 
 ## How Refresh Works
 

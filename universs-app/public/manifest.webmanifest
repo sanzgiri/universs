@@ -1,0 +1,17 @@
+{
+  "name": "Universs - Blog Feed Tracker",
+  "short_name": "Universs",
+  "description": "Aggregated posts from popular tech blogs, with Hacker News popularity.",
+  "start_url": "/",
+  "display": "standalone",
+  "background_color": "#08080c",
+  "theme_color": "#08080c",
+  "icons": [
+    {
+      "src": "/icon.svg",
+      "sizes": "any",
+      "type": "image/svg+xml",
+      "purpose": "any"
+    }
+  ]
+}

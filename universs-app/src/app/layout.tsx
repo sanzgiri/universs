@@ -1,6 +1,7 @@
-import type { Metadata } from "next";
+import type { Metadata, Viewport } from "next";
 import { Lato, JetBrains_Mono } from "next/font/google";
 import "./globals.css";
+import ServiceWorkerRegister from "./ServiceWorkerRegister";
 
 // Lato is the primary UI typeface used by Slack — a warm, highly legible
 // humanist sans-serif. We load the weights the UI actually uses.
@@ -20,6 +21,19 @@ const jetbrainsMono = JetBrains_Mono({
 export const metadata: Metadata = {
   title: "Universs - Blog Feed Tracker",
   description: "Track the latest updates from popular tech blogs",
+  manifest: "/manifest.webmanifest",
+  icons: { icon: "/icon.svg", apple: "/icon.svg" },
+  appleWebApp: { capable: true, title: "Universs", statusBarStyle: "black-translucent" },
+  alternates: {
+    types: { "application/rss+xml": "/api/feed.xml" },
+  },
+};
+
+export const viewport: Viewport = {
+  themeColor: [
+    { media: "(prefers-color-scheme: dark)", color: "#08080c" },
+    { media: "(prefers-color-scheme: light)", color: "#fbfbfd" },
+  ],
 };
 
 // Runs before React hydrates to apply the saved theme immediately, preventing
@@ -52,6 +66,7 @@ export default function RootLayout({
         className={`${lato.variable} ${jetbrainsMono.variable} antialiased`}
       >
         {children}
+        <ServiceWorkerRegister />
       </body>
     </html>
   );
